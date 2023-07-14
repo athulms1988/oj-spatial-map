@@ -39,22 +39,28 @@
     <div class="container-fluid p-2">
       <div class="row">
         <div class="col-4">
-          <oj-input-search
-                id="search1"
-                class="oj-form-control-max-width-md"
-                suggestions="[[suggestionsDP]]"
-                value="{{value}}"
-                raw-value="{{rawValue}}"
-                on-oj-value-action="[[handleValueAction]]"
-                placeholder="Search..."
-                aria-label="My search field"></oj-input-search>
+          <oj-input-search id="search1" class="oj-form-control-max-width-md" suggestions="[[suggestionsDP]]"
+            value="{{value}}" raw-value="{{rawValue}}" on-oj-value-action="[[handleValueAction]]"
+            placeholder="Search..." aria-label="My search field"></oj-input-search>
+          <oj-list-view id="listview" aria-label="list to show selection features" class="oj-listview-item-padding-off"
+            data="[[listDataProvider]]" selection-required="false">
+            <template slot="itemTemplate" data-oj-as="item">
+              <oj-list-item-layout>
+                <div>
+                  <span><b><oj-bind-text value="[[item.data.organisationName]]"></oj-bind-text></b></span><br>
+                  <span style="font-size: 12px;"><oj-bind-text value="[[item.data.address]]"></oj-bind-text></span><br>
+                  <span style="font-size: 12px;">ARR: $ <oj-bind-text value="[[item.data.arr]]"></oj-bind-text></span><br>
+                  <span style="font-size: 12px;">Type: <oj-bind-text value="[[item.data.industry]]"></oj-bind-text></span><br>
+                  <span style="font-size: 12px;">Distance: <b><oj-bind-text value="[[item.data.distance]]"></oj-bind-text></b></span><br>
+                </div>
+              </oj-list-item-layout>
+            </template>
+          </oj-list-view>
         </div>
         <div class="col-8">
-          <oj-spatial-map id="map" 
-                center="[[centerOfMap]]"
-                zoom-level="4" style="display: block; height: 100vh;"
-                basemap="osm_bright_vector">
-        </oj-spatial-map>
+          <oj-spatial-map id="map" center="[[centerOfMap]]" zoom-level="4" style="display: block; height: 100vh;"
+            basemap="osm_bright_vector">
+          </oj-spatial-map>
         </div>
       </div>
     </div>

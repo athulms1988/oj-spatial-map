@@ -6,7 +6,10 @@ import ArrayDataProvider = require("ojs/ojarraydataprovider");
 import { InputSearchElement } from "ojs/ojinputsearch";
 import "ojs/ojknockout";
 import "ojs/ojinputsearch";
-// import "ojs/ojselectsingle";
+import "ojs/ojknockout-keyset";
+import "ojs/ojlistview";
+import "ojs/ojlabel";
+import "ojs/ojlistitemlayout";
 
 class RootViewModel {
     smScreen: ko.Observable<boolean> | undefined;
@@ -27,12 +30,14 @@ class RootViewModel {
     isDelayed = ko.observableArray([]);
     orgMarkers = ko.observableArray([]);
     orgList = ko.observableArray([]);
+    centerCordinates: any = [];
     timerId: any = null;
 
     readonly suggestions = ko.observableArray([]);
     readonly dataProvider = new ArrayDataProvider(this.suggestions, {
         keyAttributes: "value",
     });
+    readonly listDataProvider = new ArrayDataProvider(this.orgList, { keyAttributes: "index" });
     readonly suggestionsDP = ko.pureComputed(() => {
         return this.dataProvider;
     });
@@ -102,6 +107,7 @@ class RootViewModel {
         const maplibRegl = mapDom.getMapLibreGL();
         (window as any).mapObj = mapObj;
         mapObj.setCenter([selectedLocation.lon, selectedLocation.lat]);
+        this.centerCordinates = [selectedLocation.lon, selectedLocation.lat];
         mapObj.setZoom(6);
         this.centerMarker && this.centerMarker.remove && this.centerMarker.remove();
         this.centerMarker = new maplibRegl.Marker()
@@ -115,6 +121,7 @@ class RootViewModel {
         this.orgList([]);
         const orgList: any = [];
         filterOrgList.forEach((org: any, index: number) => {
+            const distance = Math.round(this.getDistanceFromLatLonInKm(this.centerCordinates[1], this.centerCordinates[0], org[10], org[11])) + ' KMs'
             const orgDetail = {
                 organisationName: org[1],
                 address: [org[2], org[3], org[4], org[5], org[6], org[9]].join(', '),
@@ -128,15 +135,35 @@ class RootViewModel {
                         <span>${[org[2], org[3], org[4], org[5], org[6], org[9]].join(', ')}</span><br>
                         <span>ARR: $ ${org[7]}</span><br>
                         <span>Type: ${org[8]}</span><br>
+                        <span>Distance: ${distance}</span><br>
                     </div>`))
                     .setLngLat([org[11], org[10]])
                     .addTo(mapObj),
+                distance: distance,
                 index: index
             };
             orgList.push(orgDetail);
         });
         this.orgList(orgList);
         mapObj.setZoom(3);
+    }
+
+    getDistanceFromLatLonInKm = (lat1: any, lon1: any, lat2: any, lon2: any) => {
+        var R = 6371; // Radius of the earth in km
+        var dLat = this.deg2rad(lat2 - lat1);  // deg2rad below
+        var dLon = this.deg2rad(lon2 - lon1);
+        var a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2)
+            ;
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        var d = R * c; // Distance in km
+        return d;
+    }
+
+    deg2rad = (deg: number) => {
+        return deg * (Math.PI / 180)
     }
 }
 
