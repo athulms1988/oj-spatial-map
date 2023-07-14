@@ -6,8 +6,12 @@ async function populationOrgList(location) {
     const countryArray = location.display_name.split(',');
     const country = countryArray[countryArray.length - 1].trim();
     const countryCode = countryCodeMap[country] || "US";
-    // const orgList = await orgDetails(countryCode);
-    const orgList = await dummyOrgDetails();
+    let orgList = await dummyOrgDetails();
+    try {
+        orgList = await orgDetails(countryCode);
+    } catch(e) {
+
+    }
     return orgList.rows;
 }
 

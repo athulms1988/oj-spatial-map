@@ -110,7 +110,7 @@ class RootViewModel {
         this.centerCordinates = [selectedLocation.lon, selectedLocation.lat];
         mapObj.setZoom(6);
         this.centerMarker && this.centerMarker.remove && this.centerMarker.remove();
-        this.centerMarker = new maplibRegl.Marker()
+        this.centerMarker = new maplibRegl.Marker({color: "red"})
             .setLngLat([selectedLocation.lon, selectedLocation.lat])
             .addTo(mapObj);
         const filterOrgList = await (window as any).populationOrgList(selectedLocation);
@@ -119,9 +119,9 @@ class RootViewModel {
             org.markerRef.remove();
         })
         this.orgList([]);
-        const orgList: any = [];
+        let orgList: any = [];
         filterOrgList.forEach((org: any, index: number) => {
-            const distance = Math.round(this.getDistanceFromLatLonInKm(this.centerCordinates[1], this.centerCordinates[0], org[10], org[11])) + ' KMs'
+            const distance = Math.round(this.getDistanceFromLatLonInKm(this.centerCordinates[1], this.centerCordinates[0], org[10], org[11]))
             const orgDetail = {
                 organisationName: org[1],
                 address: [org[2], org[3], org[4], org[5], org[6], org[9]].join(', '),
@@ -131,11 +131,11 @@ class RootViewModel {
                 longitude: org[11],
                 markerRef: new maplibRegl.Marker()
                     .setPopup(new maplibRegl.Popup().setHTML(`<div>
-                        <span><b>${org[1]}</b></span><br>
+                        <span style="font-weight: bold; color: #40b1ce;">${org[1]}</span><br>
                         <span>${[org[2], org[3], org[4], org[5], org[6], org[9]].join(', ')}</span><br>
-                        <span>ARR: $ ${org[7]}</span><br>
-                        <span>Type: ${org[8]}</span><br>
-                        <span>Distance: ${distance}</span><br>
+                        <span>ARR: <b>$ ${org[7]}</b></span><br>
+                        <span>Type: <b>${org[8]}</b></span><br>
+                        <span>Distance: <b>${distance} KMs</b></span><br>
                     </div>`))
                     .setLngLat([org[11], org[10]])
                     .addTo(mapObj),
@@ -144,6 +144,7 @@ class RootViewModel {
             };
             orgList.push(orgDetail);
         });
+        orgList.sort((a: any, b: any) => a.distance - b.distance);
         this.orgList(orgList);
         mapObj.setZoom(3);
     }
