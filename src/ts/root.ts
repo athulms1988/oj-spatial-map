@@ -6,7 +6,6 @@ import "ojs/ojbutton";
 import "ojs/ojtoolbar";
 import "ojs/ojmenu";
 import "oj-spatial-map/loader";
-// import "oj-sample/input-text-typeahead/loader";
 
 
 function init(): void {
