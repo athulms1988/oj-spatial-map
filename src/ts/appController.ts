@@ -2,834 +2,142 @@ import * as ko from "knockout";
 import * as ResponsiveUtils from "ojs/ojresponsiveutils";
 import * as ResponsiveKnockoutUtils from "ojs/ojresponsiveknockoututils";
 import Context = require("ojs/ojcontext");
+import ArrayDataProvider = require("ojs/ojarraydataprovider");
+import { InputSearchElement } from "ojs/ojinputsearch";
+import "ojs/ojknockout";
+import "ojs/ojinputsearch";
+// import "ojs/ojselectsingle";
 
 class RootViewModel {
-  smScreen: ko.Observable<boolean>|undefined;
-  appName: ko.Observable<string>;
-  userLogin: ko.Observable<string>;
-  footerLinks: Array<object>;
-  dataSet: any;
-  constructor() {
-    // media queries for repsonsive layouts
-    let smQuery: string | null = ResponsiveUtils.getFrameworkQuery("sm-only");
-    if (smQuery) {
-      this.smScreen = ResponsiveKnockoutUtils.createMediaQueryObservable(smQuery);
+    smScreen: ko.Observable<boolean> | undefined;
+    appName: ko.Observable<string>;
+    userLogin: ko.Observable<string>;
+    footerLinks: Array<object>;
+    centerOfMap: any = {
+        latitude: '37.5',
+        longitude: '-122.45'
+    };
+    centerMarker: any = {};
+    value = ko.observable();
+    rawValue = ko.observable();
+    searchTerm = ko.observable();
+    searchItemContext = ko.observable();
+    previousSearchTerm = ko.observable();
+    searchTimeStamp = ko.observable();
+    isDelayed = ko.observableArray([]);
+    orgMarkers = ko.observableArray([]);
+    orgList = ko.observableArray([]);
+    timerId: any = null;
+
+    readonly suggestions = ko.observableArray([]);
+    readonly dataProvider = new ArrayDataProvider(this.suggestions, {
+        keyAttributes: "value",
+    });
+    readonly suggestionsDP = ko.pureComputed(() => {
+        return this.dataProvider;
+    });
+    constructor() {
+        // media queries for repsonsive layouts
+        let smQuery: string | null = ResponsiveUtils.getFrameworkQuery("sm-only");
+        if (smQuery) {
+            this.smScreen = ResponsiveKnockoutUtils.createMediaQueryObservable(smQuery);
+        }
+
+        // header
+
+        // application Name used in Branding Area
+        this.appName = ko.observable("App Name");
+
+        // user Info used in Global Navigation area
+        this.userLogin = ko.observable("john.hancock@oracle.com");
+
+        // footer
+        this.footerLinks = [
+            { name: 'About Oracle', linkId: 'aboutOracle', linkTarget: 'http://www.oracle.com/us/corporate/index.html#menu-about' },
+            { name: "Contact Us", id: "contactUs", linkTarget: "http://www.oracle.com/us/corporate/contact/index.html" },
+            { name: "Legal Notices", id: "legalNotices", linkTarget: "http://www.oracle.com/us/legal/index.html" },
+            { name: "Terms Of Use", id: "termsOfUse", linkTarget: "http://www.oracle.com/us/legal/terms/index.html" },
+            { name: "Your Privacy Rights", id: "yourPrivacyRights", linkTarget: "http://www.oracle.com/us/legal/privacy/index.html" },
+        ];
+        // release the application bootstrap busy state
+        Context.getPageContext().getBusyContext().applicationBootstrapComplete();
+
+        this.rawValue.subscribe((newValue) => {
+            if (newValue === "") {
+                this.suggestions([]);
+            } else {
+                if (this.timerId) {
+                    clearInterval(this.timerId);
+                    this.timerId = null;
+                }
+                this.timerId = setTimeout(() => {
+                    this.popuplateLocations();
+                }, 800);
+            }
+        })
     }
 
-    // header
+    popuplateLocations = async () => {
+        this.suggestions([]);
+        const response = await fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + this.rawValue(),
+            {
+                method: 'GET',
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            });
+        const locationResponse = await response.json();
+        this.suggestions(locationResponse.map((location: any, index: number) => {
+            return { value: location, label: location.display_name }
+        }));
 
-    // application Name used in Branding Area
-    this.appName = ko.observable("App Name");
+    }
 
-    // user Info used in Global Navigation area
-    this.userLogin = ko.observable("john.hancock@oracle.com");
-
-    // footer
-    this.footerLinks = [
-      {name: 'About Oracle', linkId: 'aboutOracle', linkTarget:'http://www.oracle.com/us/corporate/index.html#menu-about'},
-      { name: "Contact Us", id: "contactUs", linkTarget: "http://www.oracle.com/us/corporate/contact/index.html" },
-      { name: "Legal Notices", id: "legalNotices", linkTarget: "http://www.oracle.com/us/legal/index.html" },
-      { name: "Terms Of Use", id: "termsOfUse", linkTarget: "http://www.oracle.com/us/legal/terms/index.html" },
-      { name: "Your Privacy Rights", id: "yourPrivacyRights", linkTarget: "http://www.oracle.com/us/legal/privacy/index.html" },
-    ];
-
-
-    const geoJson = {
-      "type": "FeatureCollection",
-      "features": [
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.51763061005825",
-                      "38.6104581469563"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "111706",
-                  "name": "Accenture LLP",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Sacramento",
-                  "street": "2329 Gateway Oaks Dr.",
-                  "postal": "95833",
-                  "popupContent": "2329, Gateway Oaks Drive, Sacramento, Sacramento County, CAL Fire Northern Region, California, 95833, United States (accuracy : street)"
-              },
-              "id": 321881523
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-117.17643956685892",
-                      "32.90353635"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "85091",
-                  "name": "Avaak Inc",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "SAN DIEGO",
-                  "street": "6815 Flanders, Suite 200",
-                  "postal": "92126",
-                  "popupContent": "6815, Flanders Drive, Sorrento Valley, San Diego, San Diego County, CAL Fire Southern Region, California, 92121, United States (accuracy : street)"
-              },
-              "id": 113324493
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-100.445882",
-                      "39.7837304"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "76133",
-                  "name": "Cisco Systems Inc - Cisco Consumer Products",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Irvine",
-                  "street": "PO Box 5629",
-                  "postal": "92616",
-                  "popupContent": "United States (accuracy : postal code)"
-              },
-              "id": 297714218
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-100.445882",
-                      "39.7837304"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "47668",
-                  "name": "Cisco-Linksys, LLC. (fka Pure Networks)",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "IRVINE",
-                  "street": "PO Box 5629",
-                  "postal": "92616",
-                  "popupContent": "United States (accuracy : postal code)"
-              },
-              "id": 297714218
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-100.445882",
-                      "39.7837304"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "71555",
-                  "name": "Epson America",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "LONG BEACH",
-                  "street": "P.O. Box 93012",
-                  "postal": "90809-9941",
-                  "popupContent": "United States (accuracy : postal code)"
-              },
-              "id": 297714218
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-117.2078233041469",
-                      "32.901776645141524"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "48609",
-                  "name": "Fellowship Technologies",
-                  "status": "Yellow",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "San Diego",
-                  "street": "10182 Telesis Court, Ste. 100",
-                  "postal": "92121",
-                  "popupContent": "10182, Telesis Court, San Diego, San Diego County, California, 92121, United States (accuracy : street)"
-              },
-              "id": 320831058
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-122.3990864",
-                      "37.7922256"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "97099",
-                  "name": "First Republic Bank",
-                  "status": "Yellow",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "San Francisco",
-                  "street": "111 Pine Street",
-                  "postal": "94111",
-                  "popupContent": "111, Pine Street, Financial District, San Francisco, CAL Fire Northern Region, California, 94111, United States (accuracy : street)"
-              },
-              "id": 44282167
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.49500938984755",
-                      "38.57170855"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "814",
-                  "name": "Foundation for California Community Colleges",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Sacramento",
-                  "street": "1102 Q Street, Third Floor",
-                  "postal": "95814",
-                  "popupContent": "1102, Q Street, Downtown, Sacramento, Sacramento County, CAL Fire Northern Region, California, 95816, United States (accuracy : street)"
-              },
-              "id": 185007239
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.99073960388873",
-                      "37.379493"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "815",
-                  "name": "Fujitsu America",
-                  "status": "Yellow",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "SUNNYVALE",
-                  "street": "1250 E. Arques Avenue",
-                  "postal": "94085",
-                  "popupContent": "Fujitsu PFU (Building A), 1250, East Arques Avenue, Sunnyvale, Santa Clara County, California, 95054, United States (accuracy : street)"
-              },
-              "id": 150169687
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-117.65504840641273",
-                      "33.67677355"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "96183",
-                  "name": "IOGEAR",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Foothill Ranch",
-                  "street": "19641 Da Vinci",
-                  "postal": "94568",
-                  "popupContent": "19641, Da Vinci, Foothill Corporate Centre, Foothill Ranch, Lake Forest, Orange County, CAL Fire Southern Region, California, 92610, United States (accuracy : street)"
-              },
-              "id": 184958473
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.97260136734694",
-                      "37.390492459183676"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "84084",
-                  "name": "Itochu (CTC)",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "SANTA CLARA",
-                  "street": "3945 Freedom Circle",
-                  "postal": "95054",
-                  "popupContent": "3945, Freedom Circle, Santa Clara, Santa Clara County, California, 95054, United States (accuracy : street)"
-              },
-              "id": 320103925
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-117.70304837194318",
-                      "33.658222699999996"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "74695",
-                  "name": "Masimo",
-                  "status": "Red",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "IRVINE",
-                  "street": "40 Parker",
-                  "postal": "92618",
-                  "popupContent": "40, Parker, Irvine Spectrum, Irvine, Orange County, CAL Fire Southern Region, California, 92618, United States (accuracy : street)"
-              },
-              "id": 186526364
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-122.00747047559919",
-                      "37.40938889535565"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "86545",
-                  "name": "Molecular Device Corporation",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Sunnyvale",
-                  "street": "1311 Orleans Drive",
-                  "postal": "94089",
-                  "popupContent": "1311, Orleans Drive, Sunnyvale, Santa Clara County, California, 94089, United States (accuracy : street)"
-              },
-              "id": 320118090
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-100.445882",
-                      "39.7837304"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "19",
-                  "name": "Nationwide (Veterinary Pet Insurance)",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "BREA",
-                  "street": "PO BOX 2477",
-                  "postal": "92822-2477",
-                  "popupContent": "United States (accuracy : postal code)"
-              },
-              "id": 297714218
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-122.3283392650787",
-                      "37.53463458985446"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "13706",
-                  "name": "NetSuite Incorporated",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "San Mateo",
-                  "street": "2955 Campus Drive",
-                  "postal": "94403-2500",
-                  "popupContent": "2955, Campus Drive, San Mateo, San Mateo County, CAL Fire Northern Region, California, 94403, United States (accuracy : street)"
-              },
-              "id": 330467801
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-118.0515883939394",
-                      "34.01725578787879"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "71269",
-                  "name": "NewEgg Inc.",
-                  "status": "Red",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Pico Rivera",
-                  "street": "9997 Rose Hills Road",
-                  "postal": "90601",
-                  "popupContent": "9997, Rose Hills Road, Pico Rivera, Los Angeles County, CAL Fire Southern Region, California, 90601, United States (accuracy : street)"
-              },
-              "id": 305967257
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-118.25617665753715",
-                      "34.039459102138146"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "88237",
-                  "name": "Nordstrom Inc.",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Los Angeles",
-                  "street": "1013 S. Los Angeles St.",
-                  "postal": "90015",
-                  "popupContent": "1013, South Los Angeles Street, Fashion District, Downtown, Los Angeles, Los Angeles County, CAL Fire Southern Region, California, 90015, United States (accuracy : street)"
-              },
-              "id": 306047496
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-100.445882",
-                      "39.7837304"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "1061",
-                  "name": "NVIDIA Corporation",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "SANTA CLARA",
-                  "street": "PO Box 58078",
-                  "postal": "95052-8078",
-                  "popupContent": "United States (accuracy : postal code)"
-              },
-              "id": 297714218
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-122.113072297357",
-                      "37.45060805"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "80880",
-                  "name": "Ooma Inc",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "PALO ALTO",
-                  "street": "1840 Embarcadero",
-                  "postal": "94303",
-                  "popupContent": "1840, Embarcadero Road, Palo Alto, Santa Clara County, California, 94303, United States (accuracy : street)"
-              },
-              "id": 150672079
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.97260136734694",
-                      "37.390492459183676"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "41713",
-                  "name": "Rakuten Securities, Inc",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "SANTA CLARA",
-                  "street": "3945 Freedom Circle, Suite 350",
-                  "postal": "95054",
-                  "popupContent": "3945, Freedom Circle, Santa Clara, Santa Clara County, California, 95054, United States (accuracy : street)"
-              },
-              "id": 320103925
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-118.7418998",
-                      "34.278964"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "86404",
-                  "name": "Rapattoni",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "SIMI VALLEY",
-                  "street": "98 West Cochran Street",
-                  "postal": "93065-6218",
-                  "popupContent": "Cochran Street, Simi Valley, Ventura County, CAL Fire Southern Region, California, 90363, United States (accuracy : street)"
-              },
-              "id": 232640999
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.92258906724823",
-                      "37.4166481"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "10151",
-                  "name": "SanDisk Corporation",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Milpitas",
-                  "street": "601 McCarthy Blvd",
-                  "postal": "95035",
-                  "popupContent": "FireEye, 601, McCarthy Boulevard, Milpitas, Santa Clara County, CAL Fire Northern Region, California, 95035, United States (accuracy : street)"
-              },
-              "id": 110384369
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-118.42414591836734",
-                      "33.977285897959185"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "25994",
-                  "name": "Stamps.com Inc.",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "LOS ANGELES",
-                  "street": "12959 Coral Tree Place",
-                  "postal": "90066",
-                  "popupContent": "12959, Coral Tree Place, Playa Vista, Los Angeles, Los Angeles County, CAL Fire Southern Region, California, 90066, United States (accuracy : street)"
-              },
-              "id": 306000825
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-122.280035",
-                      "37.557178666666665"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "89179",
-                  "name": "SugarSync Inc.",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "San Mateo",
-                  "street": "1810 Gateway Drive, Suite 200",
-                  "postal": "94404",
-                  "popupContent": "1810, Gateway Drive, San Mateo, San Mateo County, CAL Fire Northern Region, California, 94404, United States (accuracy : street)"
-              },
-              "id": 330479832
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-118.51813848487156",
-                      "34.382353311673"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "69",
-                  "name": "The Masters College",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Santa Clarita",
-                  "street": "21726 Placerita Canyon Road",
-                  "postal": "913211200",
-                  "popupContent": "21726, Placerita Canyon Road, Newhall, Santa Clarita, Los Angeles County, California, 91321, United States (accuracy : street)"
-              },
-              "id": 306049334
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-118.45130761596482",
-                      "34.07117624207868"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "298",
-                  "name": "UCLA - Housing Administration",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Los Angeles",
-                  "street": "360 De Neve Drive",
-                  "postal": "90095",
-                  "popupContent": "360, De Neve Drive, Westwood, Los Angeles, Los Angeles County, CAL Fire Southern Region, California, 90024, United States (accuracy : street)"
-              },
-              "id": 306164338
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-118.4446109",
-                      "34.0582491"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "108270",
-                  "name": "UCLA-CTS",
-                  "status": "Yellow",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Los Angeles",
-                  "street": "10920 Wilshire Blvd, 5th Floor",
-                  "postal": "90024-6502",
-                  "popupContent": "10920, Wilshire Boulevard, Westwood Village, Westwood, Los Angeles, Los Angeles County, CAL Fire Southern Region, California, 90024, United States (accuracy : street)"
-              },
-              "id": 85725531
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.182377",
-                      "38.663706"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "22038",
-                  "name": "Verizon - FIOS",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "FOLSOM",
-                  "street": "600 Coolidge Dr, PO Box 2167",
-                  "postal": "95763-2167",
-                  "popupContent": "600, Coolidge Drive, Folsom Junction, Folsom, Sacramento County, CAL Fire Northern Region, California, 95630, United States (accuracy : street)"
-              },
-              "id": 321850958
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-121.977908",
-                      "37.375116"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "97676",
-                  "name": "Vudu, Inc.",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "Santa Clara",
-                  "street": "2980 Bowers Avenue",
-                  "postal": "95051",
-                  "popupContent": "2980, Bowers Avenue, Santa Clara, Santa Clara County, California, 95051, United States (accuracy : street)"
-              },
-              "id": 320099339
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-122.2910996",
-                      "37.5448584"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "1704",
-                  "name": "WageWorks, Inc.",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "San Mateo",
-                  "street": "1100 Park Place, 4th Floor",
-                  "postal": "94403-1148",
-                  "popupContent": "The Habit Burger Grill, 1100, Park Place, San Mateo, San Mateo County, CAL Fire Northern Region, California, 94403, United States (accuracy : street)"
-              },
-              "id": 43218858
-          },
-          {
-              "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                      "-117.2078233041469",
-                      "32.901776645141524"
-                  ]
-              },
-              "type": "Feature",
-              "properties": {
-                  "orgId": "847",
-                  "name": "WebSideStory, Inc.",
-                  "status": "Green",
-                  "licenceStatus": "Active",
-                  "customerStatus": "Active",
-                  "addressType": "Billing",
-                  "country": "United States",
-                  "state": "CA",
-                  "city": "San Diego",
-                  "street": "10182 Telesis Ct., 6th Fl.",
-                  "postal": "92121",
-                  "popupContent": "10182, Telesis Court, San Diego, San Diego County, California, 92121, United States (accuracy : street)"
-              },
-              "id": 320831058
-          }
-      ]
-    };
-
-    this.dataSet = {
-      'name': 'Sameeha',
-      'data': geoJson,
-      'renderer': {
-        'type': 'symbol',
-        // 'iconUrl': 'https://cdn-icons-png.flaticon.com/128/684/684908.png',
-        'iconId': 'circle_11'
-        // 'popup': function (feature) {
-        //   return feature.properties.description;
-        // }
-      }
-    };
-    // release the application bootstrap busy state
-    Context.getPageContext().getBusyContext().applicationBootstrapComplete();        
-  }
+    handleValueAction = async (
+        event: InputSearchElement.ojValueAction<string, Record<string, string>>
+    ) => {
+        const selectedLocation: any = event.detail.itemContext?.data.value;
+        const mapDom = (document as any).getElementById("map");
+        const mapObj = mapDom.getMapObject();
+        const maplibRegl = mapDom.getMapLibreGL();
+        (window as any).mapObj = mapObj;
+        mapObj.setCenter([selectedLocation.lon, selectedLocation.lat]);
+        mapObj.setZoom(6);
+        this.centerMarker && this.centerMarker.remove && this.centerMarker.remove();
+        this.centerMarker = new maplibRegl.Marker()
+            .setLngLat([selectedLocation.lon, selectedLocation.lat])
+            .addTo(mapObj);
+        const filterOrgList = await (window as any).populationOrgList(selectedLocation);
+        const previousOrgList = this.orgList();
+        previousOrgList.forEach((org: any) => {
+            org.markerRef.remove();
+        })
+        this.orgList([]);
+        const orgList: any = [];
+        filterOrgList.forEach((org: any, index: number) => {
+            const orgDetail = {
+                organisationName: org[1],
+                address: [org[2], org[3], org[4], org[5], org[6], org[9]].join(', '),
+                arr: org[7],
+                industry: org[8],
+                latitude: org[10],
+                longitude: org[11],
+                markerRef: new maplibRegl.Marker()
+                    .setPopup(new maplibRegl.Popup().setHTML(`<div>
+                        <span><b>${org[1]}</b></span><br>
+                        <span>${[org[2], org[3], org[4], org[5], org[6], org[9]].join(', ')}</span><br>
+                        <span>ARR: $ ${org[7]}</span><br>
+                        <span>Type: ${org[8]}</span><br>
+                    </div>`))
+                    .setLngLat([org[11], org[10]])
+                    .addTo(mapObj),
+                index: index
+            };
+            orgList.push(orgDetail);
+        });
+        this.orgList(orgList);
+        mapObj.setZoom(3);
+    }
 }
 
 export default new RootViewModel();

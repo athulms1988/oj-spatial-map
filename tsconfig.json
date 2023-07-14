@@ -29,6 +29,9 @@
       ],
       "preact": [
         "./node_modules/preact"
+      ],
+      "oj-sample/*": [
+        "./jet_components/oj-sample/types/*"
       ]
     },
     "declaration": true,

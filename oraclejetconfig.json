@@ -25,6 +25,12 @@
   "exchange-url": "https://exchange.oraclecorp.com/api/0.2.0/",
   "localComponentsSupport": true,
   "components": {
-    "oj-spatial-map": "0.0.23"
+    "oj-spatial-map": "0.0.23",
+    "oj-sample": {
+      "components": {
+        "input-text-typeahead": "8.0.0"
+      },
+      "version": null
+    }
   }
 }
