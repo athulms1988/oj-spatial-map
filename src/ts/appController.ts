@@ -34,6 +34,7 @@ class RootViewModel {
     centerCordinates: any = [];
     abortController: any;
     request: any;
+    showArr: boolean = false;
 
     readonly suggestions = ko.observableArray([]);
     readonly dataProvider = new RESTDataProvider({
@@ -44,16 +45,15 @@ class RootViewModel {
         transforms: {
           fetchFirst: {
             request: async (options: any) => {
-                console.log(this.rawValue());
               const url = new URL(options.url);
               url.searchParams.set('format', String('json'));
-              url.searchParams.set('q', this.rawValue() ? String(this.rawValue()): '');
+              url.searchParams.set('q', options.fetchParameters.filterCriterion.text ? String(options.fetchParameters.filterCriterion.text): '');
               if(this.request) {
                 this.abortController.abort();
               }
               this.abortController = new AbortController();
               this.request = new Request(url.href, {signal: this.abortController.signal});
-            //   if(!this.rawValue() || this.rawValue().trim().length === 0) {
+            //   if(!options.fetchParameters.filterCriterion.text || options.fetchParameters.filterCriterion.text.trim().length === 0) {
             //     this.abortController.abort();
             //   }
               return this.request;
@@ -64,7 +64,6 @@ class RootViewModel {
               const modifiedData = body.map((location: any, index: number) => {
                 return { value: location, label: location.display_name }
               });
-              console.log(modifiedData);
               return { data: modifiedData };
             }
           }
