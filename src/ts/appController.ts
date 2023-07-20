@@ -3,6 +3,7 @@ import * as ResponsiveUtils from "ojs/ojresponsiveutils";
 import * as ResponsiveKnockoutUtils from "ojs/ojresponsiveknockoututils";
 import Context = require("ojs/ojcontext");
 import ArrayDataProvider = require("ojs/ojarraydataprovider");
+import { RESTDataProvider } from "ojs/ojrestdataprovider";
 import { InputSearchElement } from "ojs/ojinputsearch";
 import "ojs/ojknockout";
 import "ojs/ojinputsearch";
@@ -31,16 +32,45 @@ class RootViewModel {
     orgMarkers = ko.observableArray([]);
     orgList = ko.observableArray([]);
     centerCordinates: any = [];
-    timerId: any = null;
+    abortController: any;
+    request: any;
 
     readonly suggestions = ko.observableArray([]);
-    readonly dataProvider = new ArrayDataProvider(this.suggestions, {
+    readonly dataProvider = new RESTDataProvider({
         keyAttributes: "value",
-    });
+        url: "https://nominatim.openstreetmap.org/search",
+        // fetchByOffset and fetchByKeys delegate to fetchFirst if their capabilities are not defined
+        // so at minimum we must specify transforms for fetchFirst
+        transforms: {
+          fetchFirst: {
+            request: async (options: any) => {
+                console.log(this.rawValue());
+              const url = new URL(options.url);
+              url.searchParams.set('format', String('json'));
+              url.searchParams.set('q', this.rawValue() ? String(this.rawValue()): '');
+              if(this.request) {
+                this.abortController.abort();
+              }
+              this.abortController = new AbortController();
+              this.request = new Request(url.href, {signal: this.abortController.signal});
+            //   if(!this.rawValue() || this.rawValue().trim().length === 0) {
+            //     this.abortController.abort();
+            //   }
+              return this.request;
+            },
+            response: async ({ body }: any) => {
+              // The mock server sends back a response body with shape { hasMore, totalSzie, data } so
+              // we need to extract and return them
+              const modifiedData = body.map((location: any, index: number) => {
+                return { value: location, label: location.display_name }
+              });
+              console.log(modifiedData);
+              return { data: modifiedData };
+            }
+          }
+        }
+      });
     readonly listDataProvider = new ArrayDataProvider(this.orgList, { keyAttributes: "index" });
-    readonly suggestionsDP = ko.pureComputed(() => {
-        return this.dataProvider;
-    });
     constructor() {
         // media queries for repsonsive layouts
         let smQuery: string | null = ResponsiveUtils.getFrameworkQuery("sm-only");
@@ -66,36 +96,6 @@ class RootViewModel {
         ];
         // release the application bootstrap busy state
         Context.getPageContext().getBusyContext().applicationBootstrapComplete();
-
-        this.rawValue.subscribe((newValue) => {
-            if (newValue === "") {
-                this.suggestions([]);
-            } else {
-                if (this.timerId) {
-                    clearInterval(this.timerId);
-                    this.timerId = null;
-                }
-                this.timerId = setTimeout(() => {
-                    this.popuplateLocations();
-                }, 800);
-            }
-        })
-    }
-
-    popuplateLocations = async () => {
-        this.suggestions([]);
-        const response = await fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + this.rawValue(),
-            {
-                method: 'GET',
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-        const locationResponse = await response.json();
-        this.suggestions(locationResponse.map((location: any, index: number) => {
-            return { value: location, label: location.display_name }
-        }));
-
     }
 
     handleValueAction = async (

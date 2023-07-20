@@ -1,6 +1,6 @@
 {
   "baseUrl": "js",
-  "use": "local",
+  "use": "cdn",
 
   "cdns": {
     "jet": {
@@ -17,6 +17,19 @@
     "knockout": {
       "cdn": "3rdparty",
       "cwd": "node_modules/knockout/build/output",
+      "debug": {
+        "src": "knockout-latest.debug.js",
+        "path": "libs/knockout/knockout-#{version}.debug.js",
+        "cdnPath": "knockout/knockout-3.5.1.debug"
+      },
+      "release": {
+        "src": "knockout-latest.js",
+        "path": "libs/knockout/knockout-#{version}.js",
+        "cdnPath": "knockout/knockout-3.5.1"
+      }
+    },
+
+    "dataProvider": {
       "debug": {
         "src": "knockout-latest.debug.js",
         "path": "libs/knockout/knockout-#{version}.debug.js",
