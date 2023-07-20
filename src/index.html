@@ -43,7 +43,8 @@
             value="{{value}}" raw-value="{{rawValue}}" on-oj-value-action="[[handleValueAction]]"
             placeholder="Search..." aria-label="My search field"></oj-input-search>
           <oj-list-view id="listview" aria-label="list to show selection features" class="oj-listview-item-padding-off"
-            data="[[listDataProvider]]" selection-required="false" style="max-height: calc(100vh - 50px);">
+            data="[[listDataProvider]]" selection-required="false" selection-mode="single" style="max-height: calc(100vh - 50px);" on-selected-changed="[[handleSelectedChanged]]"
+            first-selected-item="{{firstSelectedItem}}" selection="[[selectedItems]]">
             <template slot="itemTemplate" data-oj-as="item">
               <oj-list-item-layout>
                 <div>

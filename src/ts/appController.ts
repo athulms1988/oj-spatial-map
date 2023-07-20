@@ -5,6 +5,7 @@ import Context = require("ojs/ojcontext");
 import ArrayDataProvider = require("ojs/ojarraydataprovider");
 import { RESTDataProvider } from "ojs/ojrestdataprovider";
 import { InputSearchElement } from "ojs/ojinputsearch";
+import { ojListView } from "ojs/ojlistview";
 import "ojs/ojknockout";
 import "ojs/ojinputsearch";
 import "ojs/ojknockout-keyset";
@@ -37,6 +38,8 @@ class RootViewModel {
     showArr: boolean = false;
 
     readonly suggestions = ko.observableArray([]);
+    readonly firstSelectedItem = ko.observable();
+    selectedItems = ko.observableArray<number>([]);
     readonly dataProvider = new RESTDataProvider({
         keyAttributes: "value",
         url: "https://nominatim.openstreetmap.org/search",
@@ -97,6 +100,52 @@ class RootViewModel {
         Context.getPageContext().getBusyContext().applicationBootstrapComplete();
     }
 
+    isInViewport = (el: HTMLElement): boolean => {
+        const rect = el.getBoundingClientRect();
+    
+        var isinview = (
+          rect.top >= 0 &&
+          rect.left >= 0 &&
+          rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+          rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    
+        );
+    
+        // returns true or false based on whether or not the element is in viewport
+        return isinview; 
+    }
+
+    handleSelectedChanged = (
+        event: ojListView.selectedChanged<any, any>
+      ) => {
+        if(this.firstSelectedItem() && this.firstSelectedItem().data) {
+            this.highLightMarker(this.firstSelectedItem().data);
+        }
+      };
+
+      highLightMarker = (highlightedMarker: any, openPopup: boolean = true) => {
+        const selectedMarker = highlightedMarker.markerRef;
+        const selectedPopup =  highlightedMarker.popup;
+        (this.listDataProvider as any).data().forEach((marker: any) => {
+            if(openPopup) {
+                marker.popup.remove();
+            }
+            marker.markerRef._element.classList.remove('selected');
+            marker.markerRef._element.style.zIndex = '';
+        });
+        selectedMarker._element.classList.remove('selected');
+        selectedMarker._element.classList.add('selected');
+        selectedMarker._element.style.zIndex = 1;
+        if(openPopup) {
+            selectedPopup.addTo((document as any).getElementById("map").getMapObject());
+        }
+
+        const listItemElement: HTMLElement | null = document.querySelector(".oj-listview-item-layout.oj-selected");
+        if(listItemElement && !this.isInViewport(listItemElement)) {
+            listItemElement.scrollIntoView();
+        }
+      }
+
     handleValueAction = async (
         event: InputSearchElement.ojValueAction<string, Record<string, string>>
     ) => {
@@ -104,7 +153,6 @@ class RootViewModel {
         const mapDom = (document as any).getElementById("map");
         const mapObj = mapDom.getMapObject();
         const maplibRegl = mapDom.getMapLibreGL();
-        (window as any).mapObj = mapObj;
         mapObj.setCenter([selectedLocation.lon, selectedLocation.lat]);
         this.centerCordinates = [selectedLocation.lon, selectedLocation.lat];
         mapObj.setZoom(6);
@@ -120,6 +168,7 @@ class RootViewModel {
         this.orgList([]);
         let orgList: any = [];
         filterOrgList.forEach((org: any, index: number) => {
+            const popup = new maplibRegl.Popup();
             const distance = Math.round(this.getDistanceFromLatLonInKm(this.centerCordinates[1], this.centerCordinates[0], org[10], org[11]))
             const orgDetail = {
                 organisationName: org[1],
@@ -128,8 +177,9 @@ class RootViewModel {
                 industry: org[8],
                 latitude: org[10],
                 longitude: org[11],
+                popup: popup,
                 markerRef: new maplibRegl.Marker()
-                    .setPopup(new maplibRegl.Popup().setHTML(`<div>
+                    .setPopup(popup.setHTML(`<div>
                         <span style="font-weight: bold; color: #40b1ce;">${org[1]}</span><br>
                         <span>${[org[2], org[3], org[4], org[5], org[6], org[9]].join(', ')}</span><br>
                         ${this.showArr ? '<span>ARR: <b>$ '+ org[7] + '</b></span><br>': ''} 
@@ -141,6 +191,11 @@ class RootViewModel {
                 distance: distance,
                 index: index
             };
+            orgDetail.markerRef.getElement().addEventListener('click', () => {
+                this.selectedItems([orgDetail.index]);
+
+                this.highLightMarker(orgDetail, false);
+            });
             orgList.push(orgDetail);
         });
         orgList.sort((a: any, b: any) => a.distance - b.distance);

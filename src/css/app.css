@@ -45,3 +45,11 @@ html[dir="rtl"] .demo-oracle-icon {
 .oj-listview-item-padding-off .oj-listview-item-layout {
     border: 0.5px solid #00000014;
 }
+
+.selected g {
+    fill: #369436;
+}
+
+.mapboxgl-popup {
+    z-index: 2;
+}
