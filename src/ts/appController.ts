@@ -124,7 +124,7 @@ class RootViewModel {
             const orgDetail = {
                 organisationName: org[1],
                 address: [org[2], org[3], org[4], org[5], org[6], org[9]].join(', '),
-                arr: org[7],
+                arr: this.showArr ? org[7]: null,
                 industry: org[8],
                 latitude: org[10],
                 longitude: org[11],
@@ -132,7 +132,7 @@ class RootViewModel {
                     .setPopup(new maplibRegl.Popup().setHTML(`<div>
                         <span style="font-weight: bold; color: #40b1ce;">${org[1]}</span><br>
                         <span>${[org[2], org[3], org[4], org[5], org[6], org[9]].join(', ')}</span><br>
-                        <span>ARR: <b>$ ${org[7]}</b></span><br>
+                        ${this.showArr ? '<span>ARR: <b>$ '+ org[7] + '</b></span><br>': ''} 
                         <span>Type: <b>${org[8]}</b></span><br>
                         <span>Distance: <b>${distance} KMs</b></span><br>
                     </div>`))

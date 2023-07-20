@@ -49,7 +49,9 @@
                 <div>
                   <span style="font-weight: bold; color: #40b1ce;"><oj-bind-text value="[[item.data.organisationName]]"></oj-bind-text></span><br>
                   <span style="font-size: 12px;"><oj-bind-text value="[[item.data.address]]"></oj-bind-text></span><br>
-                  <span style="font-size: 12px;">ARR: $ <b><oj-bind-text value="[[item.data.arr]]"></oj-bind-text></b></span><br>
+                  <!-- ko if: item.data.arr -->
+                    <span style="font-size: 12px;">ARR: $ <b><oj-bind-text value="[[item.data.arr]]"></oj-bind-text></b></span><br>
+                  <!-- /ko -->
                   <span style="font-size: 12px;">Type: <b><oj-bind-text value="[[item.data.industry]]"></oj-bind-text></b></span><br>
                   <span style="font-size: 12px;">Distance: <b><oj-bind-text value="[[item.data.distance]]"></oj-bind-text>  KMs</b></span><br>
                 </div>
